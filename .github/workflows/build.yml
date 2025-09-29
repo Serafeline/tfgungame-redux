@@ -1,0 +1,34 @@
+name: Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run a multi-line script
+        run: |
+          wget -q $(wget -q -O - "http://www.sourcemod.net/downloads.php?branch=stable" | grep -oE -m1 "https://[a-z.]+/smdrop/[0-9.]+/sourcemod-(.*)-linux.tar.gz") -O sourcemod.tar.gz
+          tar -xzf sourcemod.tar.gz
+          rm sourcemod.tar.gz
+          mv addons/sourcemod/scripting ./
+          mv $GITHUB_WORKSPACE/tf/addons/sourcemod/scripting/* ./*
+          rm -r addons
+          rm -r include
+          rm -r cfg
+          rm -r extensions
+          spcomp tfgungame.sp
+      - name: SFTP Deploy
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
+        with:
+          username: ${{ secrets.CALLISTO_USERNAME }}
+          server: ${{ secrets.CALLISTO_ADDRESS }}
+          port: 2022
+          ssh_private_key: ${{ secrets.CALLISTO_ED25519 }}
+          local_path: ./tfgungame.smx
+          remote_path: /tf/addons/sourcemod/plugins/disabled/7a6cc14a-afa2-4815-9ae1-6ee9b868ad7d
+          sftp_only: true
+          delete_remote_files: true
+          ssh_passphrase: ${{ secrets.CALLISTO_ED25519_PASSPHRASE }}
+          
